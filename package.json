@@ -1,15 +1,16 @@
 {
-  "name": "aeboi91-bot",
+  "name": "aeboi91-github-bot",
   "version": "1.0.0",
   "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "mineflayer": "latest",
     "mineflayer-pathfinder": "latest",
-    "@google/generative-ai": "latest",
+    "mineflayer-armor-manager": "latest",
+    "mineflayer-auto-totem": "latest",
     "express": "latest",
     "socket.io": "latest"
-  },
-  "engines": {
-    "node": "20.x"
   }
 }
