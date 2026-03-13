@@ -1,5 +1,5 @@
 const mineflayer = require('mineflayer');
-const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { pathfinder } = require('mineflayer-pathfinder');
 const armorManager = require('mineflayer-armor-manager');
 const autototem = require('mineflayer-auto-totem');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -18,7 +18,11 @@ let botConfig = {
 const genAI = new GoogleGenerativeAI("AIzaSyCexqmt2cbtXsbz7d0mbfs8trACX8VElSk");
 
 function initBot() {
-    if (bot) { try { bot.quit(); } catch(e) {} }
+    // Safety: if a bot exists, remove all listeners before quitting
+    if (bot) { 
+        bot.removeAllListeners();
+        try { bot.quit(); } catch(e) {} 
+    }
     
     bot = mineflayer.createBot({
         host: botConfig.host,
@@ -33,12 +37,18 @@ function initBot() {
     bot.loadPlugin(autototem);
 
     bot.on('login', () => {
+        console.log("Logged in!");
         io.emit('chat', "[SYSTEM] AEBoi91 connected successfully!");
-        bot.armorManager.equipAll();
+        // Small delay to ensure plugins are ready
+        setTimeout(() => {
+            if (bot.armorManager) bot.armorManager.equipAll();
+        }, 2000);
     });
 
     bot.on('physicsTick', () => {
-        // Simple Killaura/Grind Logic
+        // Only run if bot and bot.entity exist to prevent "Status 1" crash
+        if (!bot || !bot.entity) return;
+
         if (bot.mode === 'guard' || bot.mode === 'grind') {
             const filter = e => (bot.mode === 'grind' ? e.type === 'mob' : e.type === 'player' && e.username !== bot.username);
             const target = bot.nearestEntity(filter);
@@ -47,14 +57,25 @@ function initBot() {
                 bot.attack(target);
             }
         }
-        if (bot.mode === 'twerk') bot.setControlState('sneak', !bot.getControlState('sneak'));
+        
+        if (bot.mode === 'twerk') {
+            bot.setControlState('sneak', !bot.getControlState('sneak'));
+        }
     });
 
     bot.on('message', m => io.emit('chat', m.toString()));
-    bot.on('end', () => setTimeout(initBot, 10000));
-    bot.on('error', err => console.log("Bot Error:", err));
+    
+    bot.on('end', () => {
+        console.log("Disconnected. Reconnecting...");
+        setTimeout(initBot, 10000);
+    });
+
+    bot.on('error', err => {
+        console.log("Bot Error:", err);
+    });
 }
 
+// Initialize the bot
 initBot();
 
 io.on('connection', (s) => {
@@ -64,18 +85,25 @@ io.on('connection', (s) => {
         initBot(); 
     });
     s.on('mode', m => { 
+        if (!bot) return;
         bot.mode = (bot.mode === m) ? null : m; 
         io.emit('chat', `[MODE] ${m} is now ${bot.mode ? 'ON' : 'OFF'}`); 
     });
     s.on('ai', async (m) => {
+        if (!bot) return;
         try {
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const res = await model.generateContent(m);
             bot.chat(res.response.text());
-        } catch (e) { io.emit('chat', "[AI ERROR] Check Key or Quota"); }
+        } catch (e) { io.emit('chat', "[AI ERROR] Problem with AI request."); }
     });
 });
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
-server.listen(3000);
+
+// Port handling for Render
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
             
