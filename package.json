@@ -5,8 +5,6 @@
   "dependencies": {
     "mineflayer": "latest",
     "mineflayer-pathfinder": "latest",
-    "mineflayer-armor-manager": "latest",
-    "mineflayer-auto-totem": "latest",
     "@google/generative-ai": "latest",
     "express": "latest",
     "socket.io": "latest"
