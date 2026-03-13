@@ -12,5 +12,80 @@
         #log { height: 250px; background: #000; border: 1px solid #333; border-radius: 8px; overflow-y: auto; padding: 10px; font-size: 12px; color: #fff; margin-bottom: 15px; }
         .input-group { margin-bottom: 12px; }
         label { font-size: 11px; display: block; margin-bottom: 5px; color: var(--main-color); opacity: 0.8; text-transform: uppercase; }
-        input, select { width: 1
-      
+        input, select { width: 100%; padding: 12px; background: #000; border: 1px solid var(--main-color); color: #fff; border-radius: 8px; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 15px; background: var(--main-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+        .ai-section { margin-top: 20px; border-top: 1px solid #333; pt: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>AEBoi91 TERMINAL</h2>
+    
+    <div id="log">System Initializing...</div>
+
+    <div class="input-group">
+        <label>Minecraft Server IP</label>
+        <input type="text" id="host" placeholder="e.g. play.pikanetwork.net">
+    </div>
+
+    <div class="input-group">
+        <label>Bot Username</label>
+        <input type="text" id="name" value="AEBoi91">
+    </div>
+
+    <div class="input-group">
+        <label>Game Version</label>
+        <select id="ver">
+            <option value="1.21.1">1.21.1</option>
+            <option value="1.20.1">1.20.1</option>
+            <option value="1.19.4">1.19.4</option>
+            <option value="1.18.2">1.18.2</option>
+        </select>
+    </div>
+
+    <button onclick="updateBot()">⚡ UPDATE & DEPLOY</button>
+
+    <div class="ai-section">
+        <label>Gemini AI Intelligence</label>
+        <input type="text" id="aiInput" placeholder="Command (e.g. Kill everyone)">
+        <button onclick="sendAI()" style="background: #fff; color: #000;">🧠 EXECUTE AI BRAIN</button>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const logElement = document.getElementById('log');
+
+    function updateBot() {
+        const host = document.getElementById('host').value;
+        const name = document.getElementById('name').value;
+        const ver = document.getElementById('ver').value;
+        socket.emit('update', { host, name, ver });
+        addLog(`[SYSTEM] Restarting bot as ${name} on ${host}...`);
+    }
+
+    function sendAI() {
+        const msg = document.getElementById('aiInput').value;
+        if (!msg) return;
+        socket.emit('ai', msg);
+        addLog(`[AI] Sent: ${msg}`);
+        document.getElementById('aiInput').value = '';
+    }
+
+    function addLog(msg) {
+        const div = document.createElement('div');
+        div.style.marginBottom = '5px';
+        div.innerText = msg;
+        logElement.appendChild(div);
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    socket.on('chat', (m) => addLog(m));
+</script>
+
+</body>
+    </html>
+    
