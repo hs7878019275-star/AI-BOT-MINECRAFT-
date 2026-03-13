@@ -1,17 +1,15 @@
 {
-  "name": "aeboi91-god-bot",
+  "name": "aeboi91-bot",
   "version": "1.0.0",
   "main": "server.js",
   "dependencies": {
     "mineflayer": "latest",
     "mineflayer-pathfinder": "latest",
-    "@nxg-org/mineflayer-custom-pvp": "latest",
     "mineflayer-armor-manager": "latest",
     "mineflayer-auto-totem": "latest",
     "@google/generative-ai": "latest",
     "express": "latest",
-    "socket.io": "latest",
-    "vec3": "latest"
+    "socket.io": "latest"
   }
 }
 
