@@ -8,6 +8,7 @@ const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 
+// --- CONFIG ---
 let bot;
 let botConfig = { 
     host: 'lol_smp.aternos.me', 
@@ -17,13 +18,25 @@ let botConfig = {
 };
 const genAI = new GoogleGenerativeAI("AIzaSyCexqmt2cbtXsbz7d0mbfs8trACX8VElSk");
 
+// --- WEB SERVER ---
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Panel Live on port ${PORT}`);
+    // Start bot ONLY after server is live
+    initBot(); 
+});
+
+// --- BOT LOGIC ---
 function initBot() {
-    // Safety: if a bot exists, remove all listeners before quitting
-    if (bot) { 
+    if (bot) {
         bot.removeAllListeners();
-        try { bot.quit(); } catch(e) {} 
+        try { bot.quit(); } catch(e) {}
     }
-    
+
     bot = mineflayer.createBot({
         host: botConfig.host,
         port: botConfig.port,
@@ -37,17 +50,12 @@ function initBot() {
     bot.loadPlugin(autototem);
 
     bot.on('login', () => {
-        console.log("Logged in!");
-        io.emit('chat', "[SYSTEM] AEBoi91 connected successfully!");
-        // Small delay to ensure plugins are ready
-        setTimeout(() => {
-            if (bot.armorManager) bot.armorManager.equipAll();
-        }, 2000);
+        io.emit('chat', "[SYSTEM] AEBoi91 connected!");
+        setTimeout(() => { if (bot.armorManager) bot.armorManager.equipAll(); }, 3000);
     });
 
     bot.on('physicsTick', () => {
-        // Only run if bot and bot.entity exist to prevent "Status 1" crash
-        if (!bot || !bot.entity) return;
+        if (!bot || !bot.entity || !bot.mode) return;
 
         if (bot.mode === 'guard' || bot.mode === 'grind') {
             const filter = e => (bot.mode === 'grind' ? e.type === 'mob' : e.type === 'player' && e.username !== bot.username);
@@ -57,37 +65,25 @@ function initBot() {
                 bot.attack(target);
             }
         }
-        
-        if (bot.mode === 'twerk') {
-            bot.setControlState('sneak', !bot.getControlState('sneak'));
-        }
+        if (bot.mode === 'twerk') bot.setControlState('sneak', !bot.getControlState('sneak'));
     });
 
     bot.on('message', m => io.emit('chat', m.toString()));
-    
-    bot.on('end', () => {
-        console.log("Disconnected. Reconnecting...");
-        setTimeout(initBot, 10000);
-    });
-
-    bot.on('error', err => {
-        console.log("Bot Error:", err);
-    });
+    bot.on('error', err => console.log("Bot Error:", err));
+    bot.on('end', () => setTimeout(initBot, 10000));
 }
 
-// Initialize the bot
-initBot();
-
+// --- SOCKETS ---
 io.on('connection', (s) => {
     s.on('update', d => { 
-        if(d.host) botConfig.host = d.host;
-        if(d.port) botConfig.port = d.port;
+        botConfig.host = d.host || botConfig.host;
+        botConfig.port = d.port || botConfig.port;
         initBot(); 
     });
     s.on('mode', m => { 
         if (!bot) return;
         bot.mode = (bot.mode === m) ? null : m; 
-        io.emit('chat', `[MODE] ${m} is now ${bot.mode ? 'ON' : 'OFF'}`); 
+        io.emit('chat', `[MODE] ${m} is ${bot.mode ? 'ON' : 'OFF'}`); 
     });
     s.on('ai', async (m) => {
         if (!bot) return;
@@ -95,15 +91,6 @@ io.on('connection', (s) => {
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const res = await model.generateContent(m);
             bot.chat(res.response.text());
-        } catch (e) { io.emit('chat', "[AI ERROR] Problem with AI request."); }
+        } catch (e) { io.emit('chat', "[AI ERROR]"); }
     });
 });
-
-app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
-
-// Port handling for Render
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-            
