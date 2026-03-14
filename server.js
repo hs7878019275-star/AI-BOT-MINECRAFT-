@@ -5,15 +5,15 @@ const autototem = require('mineflayer-auto-totem');
 const express = require('express');
 const app = express();
 const server = require('http').createServer(app);
-const io = require('socket.io')(server);
 
 // --- CONFIG ---
 const MASTER_NAME = 'AEBoi91'; 
 const MC_HOST = 'Hermeet.aternos.me';
 const MC_PORT = 14512; 
 
+// Keep-alive web server
 app.get('/', (req, res) => {
-    res.send("<h1 style='color:green;text-align:center;'>AEBoi91 Elite Guard is Online</h1>");
+    res.send("<h1 style='color:blue;text-align:center;'>AEBoi91 Guard is Running!</h1>");
 });
 
 let bot;
@@ -34,16 +34,16 @@ function startBot() {
     bot.loadPlugin(autototem);
 
     bot.on('spawn', () => {
-        console.log("✅ Spawned in SMP!");
+        console.log("✅ Bot joined the server!");
         bot.pathfinder.setMovements(new Movements(bot));
         bot.armorManager.equipAll();
-        bot.mode = 'guard'; // Set default mode
+        bot.mode = 'guard'; 
     });
 
     bot.on('physicsTick', async () => {
         if (!bot.entity || bot.mode !== 'guard') return;
         
-        bot.autototem.equip(); // Auto-defense
+        bot.autototem.equip(); 
 
         const master = bot.players[MASTER_NAME]?.entity;
         const enemy = bot.nearestEntity(e => 
@@ -51,7 +51,6 @@ function startBot() {
             e.username !== MASTER_NAME
         );
 
-        // COMBAT SYSTEM
         if (enemy) {
             const distE = bot.entity.position.distanceTo(enemy.position);
             if (distE > 15 && distE < 40) throwPearl(enemy.position);
@@ -62,9 +61,7 @@ function startBot() {
             } else {
                 bot.pathfinder.setGoal(new goals.GoalFollow(enemy, 2));
             }
-        } 
-        // SMART FOLLOW (10-20 Blocks)
-        else if (master) {
+        } else if (master) {
             const distM = bot.entity.position.distanceTo(master.position);
             if (distM > 20) {
                 if (distM > 35) throwPearl(master.position);
@@ -75,7 +72,13 @@ function startBot() {
         }
     });
 
-    bot.on('end', () => setTimeout(startBot, 10000));
+    // Handle connection drops
+    bot.on('end', () => {
+        console.log("Disconnected. Reconnecting in 15 seconds...");
+        setTimeout(startBot, 15000);
+    });
+
+    bot.on('error', (err) => console.log("Bot Error:", err.message));
 }
 
 async function throwPearl(pos) {
