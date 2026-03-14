@@ -23,6 +23,7 @@ const PASSWORD="HERMEET7878OM"
 let bot
 let guardMode=false
 let grindMode=false
+let grindCooldown=0
 
 function startBot(){
 
@@ -92,7 +93,12 @@ bot.pvp.stop()
 
 bot.on('physicsTick',async()=>{
 
+await autoSortInventory()
+
 if(grindMode){
+
+if(Date.now()<grindCooldown) return
+grindCooldown=Date.now()+5000
 
 await mineDiamonds()
 await farmCrops()
@@ -102,7 +108,7 @@ await chopTrees()
 
 if(guardMode){
 
-const enemy = findEnemy()
+const enemy=findEnemy()
 
 if(enemy)
 proCombat(enemy)
@@ -137,11 +143,41 @@ return true
 
 }
 
-/* PREDICT MOVEMENT */
+/* INVENTORY AUTO SORT */
+
+async function autoSortInventory(){
+
+const items = bot.inventory.items()
+
+const sword = items.find(i=>i.name.includes("sword"))
+const axe = items.find(i=>i.name.includes("axe"))
+const pickaxe = items.find(i=>i.name.includes("pickaxe"))
+const shield = items.find(i=>i.name==="shield")
+const totem = items.find(i=>i.name==="totem_of_undying")
+
+try{
+
+if(sword)
+await bot.equip(sword,"hand")
+
+else if(axe)
+await bot.equip(axe,"hand")
+
+if(shield)
+await bot.equip(shield,"off-hand")
+
+else if(totem)
+await bot.equip(totem,"off-hand")
+
+}catch{}
+
+}
+
+/* MOVEMENT PREDICTION */
 
 function predict(enemy){
 
-const v = enemy.velocity
+const v=enemy.velocity
 
 return enemy.position.offset(
 v.x*3,
@@ -155,12 +191,11 @@ v.z*3
 
 async function axeAttack(enemy){
 
-const axe = bot.inventory.items().find(i=>i.name.includes("axe"))
+const axe=bot.inventory.items().find(i=>i.name.includes("axe"))
 
 if(!axe) return
 
 await bot.equip(axe,"hand")
-
 bot.attack(enemy)
 
 }
@@ -169,11 +204,11 @@ bot.attack(enemy)
 
 async function maceSmash(enemy){
 
-const mace = bot.inventory.items().find(i=>i.name==="mace")
+const mace=bot.inventory.items().find(i=>i.name==="mace")
 
 if(!mace) return
 
-const dist = bot.entity.position.distanceTo(enemy.position)
+const dist=bot.entity.position.distanceTo(enemy.position)
 
 if(dist>5) return
 
@@ -193,15 +228,15 @@ bot.attack(enemy)
 
 /* WIND CHARGE PVP */
 
-async function windChargePvp(enemy){
+async function windCharge(enemy){
 
-const wind = bot.inventory.items().find(i=>i.name==="wind_charge")
+const wind=bot.inventory.items().find(i=>i.name==="wind_charge")
 
 if(!wind) return
 
-const dist = bot.entity.position.distanceTo(enemy.position)
+const dist=bot.entity.position.distanceTo(enemy.position)
 
-if(dist < 6 || dist > 18) return
+if(dist<6 || dist>18) return
 
 await bot.equip(wind,"hand")
 
@@ -209,10 +244,10 @@ await bot.lookAt(enemy.position.offset(0,1,0))
 
 bot.activateItem()
 
-bot.setControlState('forward',true)
+bot.setControlState("forward",true)
 
 setTimeout(()=>{
-bot.setControlState('forward',false)
+bot.setControlState("forward",false)
 },1200)
 
 }
@@ -221,22 +256,21 @@ bot.setControlState('forward',false)
 
 async function cobwebTrap(enemy){
 
-const web = bot.inventory.items().find(i=>i.name==="cobweb")
+const web=bot.inventory.items().find(i=>i.name==="cobweb")
 
 if(!web) return
 
-const dist = bot.entity.position.distanceTo(enemy.position)
+const dist=bot.entity.position.distanceTo(enemy.position)
 
 if(dist>3) return
 
-const block = bot.blockAt(enemy.position.offset(0,-1,0))
+const block=bot.blockAt(enemy.position.offset(0,-1,0))
 
 if(!block) return
 
 try{
 
 await bot.equip(web,"hand")
-
 await bot.placeBlock(block,new Vec3(0,1,0))
 
 }catch{}
@@ -247,17 +281,21 @@ await bot.placeBlock(block,new Vec3(0,1,0))
 
 async function autoShield(enemy){
 
-const shield = bot.inventory.items().find(i=>i.name==="shield")
+const shield=bot.inventory.items().find(i=>i.name==="shield")
 
 if(!shield) return
 
-const dist = bot.entity.position.distanceTo(enemy.position)
+const dist=bot.entity.position.distanceTo(enemy.position)
 
 if(dist<4){
 
 await bot.equip(shield,"off-hand")
 
 bot.activateItem()
+
+setTimeout(()=>{
+bot.deactivateItem()
+},800)
 
 }
 
@@ -269,7 +307,7 @@ async function totemClutch(){
 
 if(bot.health>8) return
 
-const t = bot.inventory.items().find(i=>i.name==="totem_of_undying")
+const t=bot.inventory.items().find(i=>i.name==="totem_of_undying")
 
 if(!t) return
 
@@ -283,13 +321,13 @@ async function pearlEscape(enemy){
 
 if(bot.health>6) return
 
-const pearl = bot.inventory.items().find(i=>i.name==="ender_pearl")
+const pearl=bot.inventory.items().find(i=>i.name==="ender_pearl")
 
 if(!pearl) return
 
 await bot.equip(pearl,"hand")
 
-const pos = bot.entity.position.offset(
+const pos=bot.entity.position.offset(
 (bot.entity.position.x-enemy.position.x)*2,
 2,
 (bot.entity.position.z-enemy.position.z)*2
@@ -305,21 +343,22 @@ bot.activateItem()
 
 async function proCombat(enemy){
 
-const dist = bot.entity.position.distanceTo(enemy.position)
+const dist=bot.entity.position.distanceTo(enemy.position)
 
 const side=Math.random()>0.5?2:-2
 
-const pos = enemy.position.offset(side,0,side)
+const pos=enemy.position.offset(side,0,side)
 
+if(bot.pathfinder)
 bot.pathfinder.setGoal(
 new goals.GoalBlock(pos.x,pos.y,pos.z)
 )
 
-const predicted = predict(enemy)
+const predicted=predict(enemy)
 
 bot.lookAt(predicted)
 
-await windChargePvp(enemy)
+await windCharge(enemy)
 
 await maceSmash(enemy)
 
@@ -340,7 +379,7 @@ pearlEscape(enemy)
 
 async function mineDiamonds(){
 
-const block = bot.findBlock({
+const block=bot.findBlock({
 matching:b=>b.name.includes("diamond_ore"),
 maxDistance:64
 })
@@ -353,7 +392,7 @@ await bot.collectBlock.collect(block)
 
 async function farmCrops(){
 
-const crop = bot.findBlock({
+const crop=bot.findBlock({
 matching:b=>b.name==="wheat",
 maxDistance:32
 })
@@ -366,7 +405,7 @@ await bot.collectBlock.collect(crop)
 
 async function chopTrees(){
 
-const log = bot.findBlock({
+const log=bot.findBlock({
 matching:b=>b.name.includes("log"),
 maxDistance:32
 })
@@ -377,6 +416,6 @@ await bot.collectBlock.collect(log)
 
 }
 
-/* START BOT */
+/* START */
 
 startBot()
