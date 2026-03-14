@@ -1,10 +1,7 @@
 {
-  "name": "aeboi91-github-bot",
+  "name": "aeboi91-bot",
   "version": "1.0.0",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
   "dependencies": {
     "mineflayer": "latest",
     "mineflayer-pathfinder": "latest",
@@ -12,5 +9,8 @@
     "mineflayer-auto-totem": "latest",
     "express": "latest",
     "socket.io": "latest"
+  },
+  "scripts": {
+    "start": "node server.js"
   }
 }
