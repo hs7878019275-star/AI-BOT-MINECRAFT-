@@ -7,30 +7,32 @@ const collectBlock = require('mineflayer-collectblock').plugin
 const Vec3 = require('vec3')
 const express = require('express')
 
+/* KEEP ALIVE SERVER (Render) */
+
 const app = express()
 app.get('/', (req,res)=>res.send("Bot running"))
 app.listen(process.env.PORT || 3000)
 
 /* CONFIG */
 
-const HOST="Hermeet.aternos.me"
-const PORT=14512
-const VERSION="1.21.1"
+const HOST = "Hermeet.aternos.me"
+const PORT = 14512
+const VERSION = "1.21.1"
 
-const OWNER="Hermeet_playzz1"
-const PASSWORD="HERMEET7878OM"
+const USERNAME = "AEBoi91"
+const OWNER = "Hermeet_playzz1"
+const PASSWORD = "HERMEET7878OM"
 
 let bot
 let guardMode=false
 let grindMode=false
-let grindCooldown=0
 
 function startBot(){
 
 bot = mineflayer.createBot({
 host:HOST,
 port:PORT,
-username:"AEBoi91",
+username:USERNAME,
 version:VERSION
 })
 
@@ -39,6 +41,8 @@ bot.loadPlugin(pvp)
 bot.loadPlugin(armorManager)
 bot.loadPlugin(autoTotem)
 bot.loadPlugin(collectBlock)
+
+/* SPAWN */
 
 bot.once('spawn',()=>{
 
@@ -93,15 +97,13 @@ bot.pvp.stop()
 
 bot.on('physicsTick',async()=>{
 
+await autoEat()
 await autoSortInventory()
+await totemClutch()
 
 if(grindMode){
 
-if(Date.now()<grindCooldown) return
-grindCooldown=Date.now()+5000
-
 await mineDiamonds()
-await farmCrops()
 await chopTrees()
 
 }
@@ -143,161 +145,55 @@ return true
 
 }
 
-/* INVENTORY AUTO SORT */
+/* AUTO EAT */
+
+async function autoEat(){
+
+if(bot.food>=18) return
+
+const food=bot.inventory.items().find(i=>
+i.name.includes("bread") ||
+i.name.includes("beef") ||
+i.name.includes("pork") ||
+i.name.includes("chicken")
+)
+
+if(!food) return
+
+try{
+
+await bot.equip(food,"hand")
+bot.activateItem()
+
+setTimeout(()=>{
+bot.deactivateItem()
+},2500)
+
+}catch{}
+
+}
+
+/* INVENTORY SORT */
 
 async function autoSortInventory(){
 
-const items = bot.inventory.items()
+const items=bot.inventory.items()
 
-const sword = items.find(i=>i.name.includes("sword"))
-const axe = items.find(i=>i.name.includes("axe"))
-const pickaxe = items.find(i=>i.name.includes("pickaxe"))
-const shield = items.find(i=>i.name==="shield")
-const totem = items.find(i=>i.name==="totem_of_undying")
+const sword=items.find(i=>i.name.includes("sword"))
+const axe=items.find(i=>i.name.includes("axe"))
+const shield=items.find(i=>i.name==="shield")
 
 try{
 
 if(sword)
 await bot.equip(sword,"hand")
-
 else if(axe)
 await bot.equip(axe,"hand")
 
 if(shield)
 await bot.equip(shield,"off-hand")
 
-else if(totem)
-await bot.equip(totem,"off-hand")
-
 }catch{}
-
-}
-
-/* MOVEMENT PREDICTION */
-
-function predict(enemy){
-
-const v=enemy.velocity
-
-return enemy.position.offset(
-v.x*3,
-v.y*3,
-v.z*3
-)
-
-}
-
-/* AXE SHIELD BREAK */
-
-async function axeAttack(enemy){
-
-const axe=bot.inventory.items().find(i=>i.name.includes("axe"))
-
-if(!axe) return
-
-await bot.equip(axe,"hand")
-bot.attack(enemy)
-
-}
-
-/* MACE SMASH */
-
-async function maceSmash(enemy){
-
-const mace=bot.inventory.items().find(i=>i.name==="mace")
-
-if(!mace) return
-
-const dist=bot.entity.position.distanceTo(enemy.position)
-
-if(dist>5) return
-
-await bot.equip(mace,"hand")
-
-bot.setControlState('jump',true)
-
-setTimeout(()=>{
-bot.setControlState('jump',false)
-},300)
-
-setTimeout(()=>{
-bot.attack(enemy)
-},450)
-
-}
-
-/* WIND CHARGE PVP */
-
-async function windCharge(enemy){
-
-const wind=bot.inventory.items().find(i=>i.name==="wind_charge")
-
-if(!wind) return
-
-const dist=bot.entity.position.distanceTo(enemy.position)
-
-if(dist<6 || dist>18) return
-
-await bot.equip(wind,"hand")
-
-await bot.lookAt(enemy.position.offset(0,1,0))
-
-bot.activateItem()
-
-bot.setControlState("forward",true)
-
-setTimeout(()=>{
-bot.setControlState("forward",false)
-},1200)
-
-}
-
-/* COBWEB TRAP */
-
-async function cobwebTrap(enemy){
-
-const web=bot.inventory.items().find(i=>i.name==="cobweb")
-
-if(!web) return
-
-const dist=bot.entity.position.distanceTo(enemy.position)
-
-if(dist>3) return
-
-const block=bot.blockAt(enemy.position.offset(0,-1,0))
-
-if(!block) return
-
-try{
-
-await bot.equip(web,"hand")
-await bot.placeBlock(block,new Vec3(0,1,0))
-
-}catch{}
-
-}
-
-/* AUTO SHIELD */
-
-async function autoShield(enemy){
-
-const shield=bot.inventory.items().find(i=>i.name==="shield")
-
-if(!shield) return
-
-const dist=bot.entity.position.distanceTo(enemy.position)
-
-if(dist<4){
-
-await bot.equip(shield,"off-hand")
-
-bot.activateItem()
-
-setTimeout(()=>{
-bot.deactivateItem()
-},800)
-
-}
 
 }
 
@@ -339,39 +235,80 @@ bot.activateItem()
 
 }
 
-/* PRO COMBAT */
+/* COBWEB TRAP */
+
+async function cobwebTrap(enemy){
+
+const web=bot.inventory.items().find(i=>i.name==="cobweb")
+
+if(!web) return
+
+const dist=bot.entity.position.distanceTo(enemy.position)
+
+if(dist>3) return
+
+const block=bot.blockAt(enemy.position.offset(0,-1,0))
+
+if(!block) return
+
+try{
+
+await bot.equip(web,"hand")
+await bot.placeBlock(block,new Vec3(0,1,0))
+
+}catch{}
+
+}
+
+/* AXE SHIELD BREAK */
+
+async function axeAttack(enemy){
+
+const axe=bot.inventory.items().find(i=>i.name.includes("axe"))
+
+if(!axe) return
+
+await bot.equip(axe,"hand")
+bot.attack(enemy)
+
+}
+
+/* WIND CHARGE CHASE */
+
+async function windCharge(enemy){
+
+const wind=bot.inventory.items().find(i=>i.name==="wind_charge")
+
+if(!wind) return
+
+const dist=bot.entity.position.distanceTo(enemy.position)
+
+if(dist<6 || dist>18) return
+
+await bot.equip(wind,"hand")
+
+await bot.lookAt(enemy.position.offset(0,1,0))
+
+bot.activateItem()
+
+}
+
+/* COMBAT */
 
 async function proCombat(enemy){
 
 const dist=bot.entity.position.distanceTo(enemy.position)
 
-const side=Math.random()>0.5?2:-2
-
-const pos=enemy.position.offset(side,0,side)
-
-if(bot.pathfinder)
-bot.pathfinder.setGoal(
-new goals.GoalBlock(pos.x,pos.y,pos.z)
-)
-
-const predicted=predict(enemy)
-
-bot.lookAt(predicted)
+bot.lookAt(enemy.position)
 
 await windCharge(enemy)
-
-await maceSmash(enemy)
 
 if(dist<4)
 axeAttack(enemy)
 
-cobwebTrap(enemy)
+await cobwebTrap(enemy)
 
-autoShield(enemy)
-
-totemClutch()
-
-pearlEscape(enemy)
+await pearlEscape(enemy)
 
 }
 
@@ -390,19 +327,6 @@ await bot.collectBlock.collect(block)
 
 }
 
-async function farmCrops(){
-
-const crop=bot.findBlock({
-matching:b=>b.name==="wheat",
-maxDistance:32
-})
-
-if(!crop) return
-
-await bot.collectBlock.collect(crop)
-
-}
-
 async function chopTrees(){
 
 const log=bot.findBlock({
@@ -416,6 +340,6 @@ await bot.collectBlock.collect(log)
 
 }
 
-/* START */
+/* START BOT */
 
 startBot()
