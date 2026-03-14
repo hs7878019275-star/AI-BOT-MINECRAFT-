@@ -7,8 +7,6 @@ const collectBlock = require('mineflayer-collectblock').plugin
 const Vec3 = require('vec3')
 const express = require('express')
 
-/* WEB SERVER */
-
 const app = express()
 app.get('/', (req,res)=>res.send("Bot running"))
 app.listen(process.env.PORT || 3000)
@@ -17,12 +15,10 @@ app.listen(process.env.PORT || 3000)
 
 const HOST="Hermeet.aternos.me"
 const PORT=14512
-const VERSION="1.20.4"
+const VERSION="1.21.1"
 
 const OWNER="Hermeet_playzz1"
 const PASSWORD="HERMEET7878OM"
-
-const STORAGE = new Vec3(0,64,0)
 
 let bot
 let guardMode=false
@@ -58,33 +54,33 @@ console.log("Bot joined server")
 
 bot.on('message',msg=>{
 
-const text = msg.toString()
+const t = msg.toString()
 
-if(text.includes("/register"))
+if(t.includes("/register"))
 bot.chat(`/register ${PASSWORD} ${PASSWORD}`)
 
-if(text.includes("/login"))
+if(t.includes("/login"))
 bot.chat(`/login ${PASSWORD}`)
 
 })
 
 /* OWNER COMMANDS */
 
-bot.on('chat',(username,message)=>{
+bot.on('chat',(user,msg)=>{
 
-if(username!==OWNER) return
+if(user!==OWNER) return
 
-if(message==="guard"){
+if(msg==="guard"){
 guardMode=true
 grindMode=false
 }
 
-if(message==="grind"){
+if(msg==="grind"){
 grindMode=true
 guardMode=false
 }
 
-if(message==="stop"){
+if(msg==="stop"){
 guardMode=false
 grindMode=false
 bot.pvp.stop()
@@ -101,15 +97,10 @@ if(grindMode){
 await mineDiamonds()
 await farmCrops()
 await chopTrees()
-await xpFarm()
-await villagerTrade()
-await storeItems()
 
 }
 
 if(guardMode){
-
-await defendRaid()
 
 const enemy = findEnemy()
 
@@ -123,15 +114,18 @@ proCombat(enemy)
 /* RECONNECT */
 
 bot.on("end",()=>{
-console.log("Disconnected, reconnecting...")
+
+console.log("Reconnecting...")
+
 setTimeout(startBot,10000)
+
 })
 
 bot.on("error",err=>console.log(err))
 
 }
 
-/* ENEMY FINDER */
+/* FIND ENEMY */
 
 function findEnemy(){
 
@@ -143,7 +137,7 @@ return true
 
 }
 
-/* PREDICTION */
+/* PREDICT MOVEMENT */
 
 function predict(enemy){
 
@@ -157,7 +151,7 @@ v.z*3
 
 }
 
-/* AXE ATTACK */
+/* AXE SHIELD BREAK */
 
 async function axeAttack(enemy){
 
@@ -167,73 +161,39 @@ if(!axe) return
 
 await bot.equip(axe,"hand")
 
-bot.lookAt(enemy.position.offset(0,1,0))
-
 bot.attack(enemy)
 
 }
 
-/* AUTO SHIELD */
+/* MACE SMASH */
 
-async function autoShield(enemy){
+async function maceSmash(enemy){
 
-const shield = bot.inventory.items().find(i=>i.name==="shield")
+const mace = bot.inventory.items().find(i=>i.name==="mace")
 
-if(!shield) return
+if(!mace) return
 
 const dist = bot.entity.position.distanceTo(enemy.position)
 
-if(dist<4){
+if(dist>5) return
 
-await bot.equip(shield,"off-hand")
+await bot.equip(mace,"hand")
 
-bot.activateItem()
+bot.setControlState('jump',true)
 
-}
+setTimeout(()=>{
+bot.setControlState('jump',false)
+},300)
 
-}
-
-/* TOTEM CLUTCH */
-
-async function totemClutch(){
-
-if(bot.health>8) return
-
-const totem = bot.inventory.items().find(i=>i.name==="totem_of_undying")
-
-if(!totem) return
-
-await bot.equip(totem,"off-hand")
+setTimeout(()=>{
+bot.attack(enemy)
+},450)
 
 }
 
-/* PEARL ESCAPE */
+/* WIND CHARGE PVP */
 
-async function pearlEscape(enemy){
-
-if(bot.health>6) return
-
-const pearl = bot.inventory.items().find(i=>i.name==="ender_pearl")
-
-if(!pearl) return
-
-await bot.equip(pearl,"hand")
-
-const pos = bot.entity.position.offset(
-(bot.entity.position.x-enemy.position.x)*2,
-2,
-(bot.entity.position.z-enemy.position.z)*2
-)
-
-await bot.lookAt(pos)
-
-bot.activateItem()
-
-}
-
-/* WIND CHARGE */
-
-async function windChase(enemy){
+async function windChargePvp(enemy){
 
 const wind = bot.inventory.items().find(i=>i.name==="wind_charge")
 
@@ -241,13 +201,19 @@ if(!wind) return
 
 const dist = bot.entity.position.distanceTo(enemy.position)
 
-if(dist<10) return
+if(dist < 6 || dist > 18) return
 
 await bot.equip(wind,"hand")
 
 await bot.lookAt(enemy.position.offset(0,1,0))
 
 bot.activateItem()
+
+bot.setControlState('forward',true)
+
+setTimeout(()=>{
+bot.setControlState('forward',false)
+},1200)
 
 }
 
@@ -277,7 +243,65 @@ await bot.placeBlock(block,new Vec3(0,1,0))
 
 }
 
-/* COMBAT */
+/* AUTO SHIELD */
+
+async function autoShield(enemy){
+
+const shield = bot.inventory.items().find(i=>i.name==="shield")
+
+if(!shield) return
+
+const dist = bot.entity.position.distanceTo(enemy.position)
+
+if(dist<4){
+
+await bot.equip(shield,"off-hand")
+
+bot.activateItem()
+
+}
+
+}
+
+/* TOTEM CLUTCH */
+
+async function totemClutch(){
+
+if(bot.health>8) return
+
+const t = bot.inventory.items().find(i=>i.name==="totem_of_undying")
+
+if(!t) return
+
+await bot.equip(t,"off-hand")
+
+}
+
+/* PEARL ESCAPE */
+
+async function pearlEscape(enemy){
+
+if(bot.health>6) return
+
+const pearl = bot.inventory.items().find(i=>i.name==="ender_pearl")
+
+if(!pearl) return
+
+await bot.equip(pearl,"hand")
+
+const pos = bot.entity.position.offset(
+(bot.entity.position.x-enemy.position.x)*2,
+2,
+(bot.entity.position.z-enemy.position.z)*2
+)
+
+await bot.lookAt(pos)
+
+bot.activateItem()
+
+}
+
+/* PRO COMBAT */
 
 async function proCombat(enemy){
 
@@ -295,6 +319,10 @@ const predicted = predict(enemy)
 
 bot.lookAt(predicted)
 
+await windChargePvp(enemy)
+
+await maceSmash(enemy)
+
 if(dist<4)
 axeAttack(enemy)
 
@@ -306,31 +334,9 @@ totemClutch()
 
 pearlEscape(enemy)
 
-windChase(enemy)
-
 }
 
-/* RAID DEFENSE */
-
-async function defendRaid(){
-
-const raider = bot.nearestEntity(e=>
-e.type==="mob" &&
-(
-e.name==="pillager"||
-e.name==="vindicator"||
-e.name==="evoker"||
-e.name==="ravager"
-)
-)
-
-if(!raider) return
-
-bot.pvp.attack(raider)
-
-}
-
-/* DIAMOND MINING */
+/* GRIND */
 
 async function mineDiamonds(){
 
@@ -345,8 +351,6 @@ await bot.collectBlock.collect(block)
 
 }
 
-/* FARM CROPS */
-
 async function farmCrops(){
 
 const crop = bot.findBlock({
@@ -360,8 +364,6 @@ await bot.collectBlock.collect(crop)
 
 }
 
-/* TREE FARM */
-
 async function chopTrees(){
 
 const log = bot.findBlock({
@@ -372,48 +374,6 @@ maxDistance:32
 if(!log) return
 
 await bot.collectBlock.collect(log)
-
-}
-
-/* XP FARM */
-
-async function xpFarm(){
-
-const mob = bot.nearestEntity(e=>
-e.type==="mob" &&
-(
-e.name==="zombie"||
-e.name==="skeleton"||
-e.name==="spider"
-)
-)
-
-if(!mob) return
-
-bot.pvp.attack(mob)
-
-}
-
-/* VILLAGER TRADE */
-
-async function villagerTrade(){
-
-const villager = bot.nearestEntity(e=>e.name==="villager")
-
-if(!villager) return
-
-}
-
-/* STORAGE */
-
-async function storeItems(){
-
-const chest = bot.findBlock({
-matching:b=>b.name.includes("chest"),
-maxDistance:32
-})
-
-if(!chest) return
 
 }
 
