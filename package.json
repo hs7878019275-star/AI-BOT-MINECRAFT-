@@ -7,10 +7,12 @@
     "mineflayer-pathfinder": "latest",
     "mineflayer-armor-manager": "latest",
     "mineflayer-auto-totem": "latest",
-    "express": "latest",
-    "socket.io": "latest"
+    "express": "latest"
   },
   "scripts": {
     "start": "node server.js"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
