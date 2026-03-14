@@ -7,34 +7,43 @@ const app = express();
 const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 
-// CONFIG - Use Environment Variables for Security
-const MASTER_NAME = process.env.MASTER_NAME || 'AEBoi91'; 
-const host = process.env.MC_HOST || 'lol_smp.aternos.me';
-const port = parseInt(process.env.MC_PORT) || 18949; 
+// --- CONFIG ---
+const MASTER_NAME = 'AEBoi91'; 
+const MC_HOST = 'Hermeet.aternos.me';
+const MC_PORT = 14512; 
 
 app.get('/', (req, res) => {
-    res.send("<h1>AEBoi91 Elite Guard is Online</h1>");
+    res.send("<h1 style='color:green;text-align:center;'>AEBoi91 Elite Guard is Online</h1>");
 });
 
 let bot;
 
 function startBot() {
-    bot = mineflayer.createBot({ host, port, username: 'AEBoi91', version: '1.21.1', auth: 'offline' });
+    console.log(`🚀 Connecting to ${MC_HOST}:${MC_PORT}...`);
+    
+    bot = mineflayer.createBot({
+        host: MC_HOST,
+        port: MC_PORT,
+        username: 'AEBoi91',
+        version: '1.21.1',
+        auth: 'offline'
+    });
 
     bot.loadPlugin(pathfinder);
     bot.loadPlugin(armorManager);
     bot.loadPlugin(autototem);
 
     bot.on('spawn', () => {
-        const defaultMove = new Movements(bot);
-        bot.pathfinder.setMovements(defaultMove);
+        console.log("✅ Spawned in SMP!");
+        bot.pathfinder.setMovements(new Movements(bot));
         bot.armorManager.equipAll();
-        console.log("Guard Spawned and Ready.");
+        bot.mode = 'guard'; // Set default mode
     });
 
     bot.on('physicsTick', async () => {
         if (!bot.entity || bot.mode !== 'guard') return;
-        bot.autototem.equip();
+        
+        bot.autototem.equip(); // Auto-defense
 
         const master = bot.players[MASTER_NAME]?.entity;
         const enemy = bot.nearestEntity(e => 
@@ -42,20 +51,24 @@ function startBot() {
             e.username !== MASTER_NAME
         );
 
+        // COMBAT SYSTEM
         if (enemy) {
-            const dist = bot.entity.position.distanceTo(enemy.position);
-            if (dist > 15 && dist < 40) throwPearl(enemy.position);
-            if (dist < 4.5) {
+            const distE = bot.entity.position.distanceTo(enemy.position);
+            if (distE > 15 && distE < 40) throwPearl(enemy.position);
+            
+            if (distE < 4.5) {
                 bot.lookAt(enemy.position.offset(0, 1.6, 0));
                 bot.attack(enemy);
             } else {
                 bot.pathfinder.setGoal(new goals.GoalFollow(enemy, 2));
             }
-        } else if (master) {
+        } 
+        // SMART FOLLOW (10-20 Blocks)
+        else if (master) {
             const distM = bot.entity.position.distanceTo(master.position);
             if (distM > 20) {
                 if (distM > 35) throwPearl(master.position);
-                bot.pathfinder.setGoal(new goals.GoalFollow(master, 10));
+                bot.pathfinder.setGoal(new goals.GoalFollow(master, 12));
             } else if (distM < 10) {
                 bot.pathfinder.setGoal(null);
             }
@@ -74,4 +87,4 @@ async function throwPearl(pos) {
     }
 }
 
-server.listen(process.env.PORT || 3000, '0.0.0.0', () => startBot());
+server.listen(process.env.PORT || 3000, () => startBot());
