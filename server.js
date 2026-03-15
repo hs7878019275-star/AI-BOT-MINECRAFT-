@@ -31,10 +31,10 @@ let actionCooldown = 0
 function startBot(){
 
 bot = mineflayer.createBot({
-host:HOST,
-port:PORT,
-username:USERNAME,
-version:VERSION
+host:Hermeet.aternos.me,
+port:14512,
+username:AEBoi91,
+version:1.21.1
 })
 
 bot.loadPlugin(pathfinder)
